@@ -5,7 +5,8 @@ const getBaseURL = () => {
   if (hostname === 'localhost' || hostname === '127.0.0.1') {
     return 'http://localhost:5000/api';
   }
-  return 'https://uncrookedly-lipopectic-loura.ngrok-free.dev/api';
+  // ✅ Railway production
+  return 'https://bayazoo-backend-production.up.railway.app/api';
 };
 
 const isNgrok = () => {
@@ -29,4 +30,3 @@ api.interceptors.request.use((config) => {
 });
 
 export default api;
-
