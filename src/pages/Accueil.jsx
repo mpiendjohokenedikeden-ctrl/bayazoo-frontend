@@ -203,13 +203,7 @@ const Accueil = () => {
 };
 
 const styles = {
-  page: {
-  maxWidth: '1200px',
-  margin: '0 auto',
-  padding: 'clamp(5rem, 10vw, 6rem) 2rem 5rem', // ✅ 5rem en bas
-  minHeight: '100vh',
-  fontFamily: "'Inter', -apple-system, sans-serif"
-},
+
   hero: {
     minHeight: '100vh',
     display: 'flex',
