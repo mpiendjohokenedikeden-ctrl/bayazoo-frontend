@@ -18,6 +18,7 @@ import ReceveurCommandes from './pages/receveur/Commandes';
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatFlottant from './components/ChatFlottant';
+import MotDePasseOublie from './pages/MotDePasseOublie';
 import './index.css';
 
 const RouteProtegee = ({ element, role }) => {
@@ -50,6 +51,7 @@ function App() {
         <Route path="/menu" element={<Menu />} />
         <Route path="/login" element={<Login />} />
         <Route path="/inscription" element={<Inscription />} />
+        <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
         <Route path="/panier" element={<RouteClient element={<Panier />} />} />
         <Route path="/suivi" element={<RouteClient element={<Suivi />} />} />
         <Route path="/admin" element={<RouteProtegee element={<Dashboard />} role="admin" />} />
@@ -62,10 +64,7 @@ function App() {
         <Route path="/receveur/commandes" element={<RouteProtegee element={<ReceveurCommandes />} role="receveur" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-
-      {/* CHAT FLOTTANT GLOBAL — visible sur toutes les pages client */}
       <ChatFlottant />
-
       <Footer />
     </Router>
   );
