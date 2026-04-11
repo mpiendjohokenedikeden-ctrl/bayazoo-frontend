@@ -9,11 +9,13 @@ const F = {
 
 const getImageUrl = (image) => {
   if (!image) return null;
+  if (image.startsWith('http')) return image; // ✅ URL Cloudinary
   if (image.startsWith('/uploads/')) {
     return 'http://' + window.location.hostname + ':5000' + image;
   }
   return null;
 };
+
 
 const Menu = () => {
   const { ajouterAuPanier } = useCart();
