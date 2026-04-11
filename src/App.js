@@ -19,6 +19,7 @@ import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import ChatFlottant from './components/ChatFlottant';
 import MotDePasseOublie from './pages/MotDePasseOublie';
+import Profil from './pages/Profil';
 import './index.css';
 
 const RouteProtegee = ({ element, role }) => {
@@ -63,6 +64,7 @@ function App() {
         <Route path="/livreur/scanner" element={<RouteProtegee element={<Scanner />} role="livreur" />} />
         <Route path="/receveur/commandes" element={<RouteProtegee element={<ReceveurCommandes />} role="receveur" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="/profil" element={<RouteClient element={<Profil />} />} />
       </Routes>
       <ChatFlottant />
       <Footer />
