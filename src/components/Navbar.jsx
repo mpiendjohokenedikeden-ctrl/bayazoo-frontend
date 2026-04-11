@@ -51,6 +51,13 @@ const IconLogin = ({ active }) => (
   </svg>
 );
 
+const IconProfil = ({ active }) => (
+  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#E63946' : '#999'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+    <circle cx="12" cy="7" r="4"/>
+  </svg>
+);
+
 const IconDashboard = ({ active }) => (
   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke={active ? '#E63946' : '#999'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
@@ -177,10 +184,9 @@ const Navbar = () => {
       <>
         <nav style={styles.navbar}>
           <div style={styles.logo}>
-  <img src="/logo.png" alt="BAYAZOO" style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
-  BAY<span style={{ color: '#E63946' }}>A</span>ZOO
-  <span style={{ ...styles.roleBadgeBase, background: '...' }}>...</span>
-</div>
+            <img src="/logo.png" alt="BAYAZOO" style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
+            BAY<span style={{ color: '#E63946' }}>A</span>ZOO
+          </div>
           <ul style={{ ...styles.navLinks, display: isMobile ? 'none' : 'flex' }}>
             <li>
               <Link to="/receveur/commandes" style={{ ...styles.link, ...(isActive('/receveur/commandes') ? styles.linkActif : {}) }}>
@@ -228,11 +234,10 @@ const Navbar = () => {
     return (
       <>
         <nav style={styles.navbar}>
-         <div style={styles.logo}>
-  <img src="/logo.png" alt="BAYAZOO" style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
-  BAY<span style={{ color: '#E63946' }}>A</span>ZOO
-  <span style={{ ...styles.roleBadgeBase, background: '...' }}>...</span>
-</div>
+          <div style={styles.logo}>
+            <img src="/logo.png" alt="BAYAZOO" style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
+            BAY<span style={{ color: '#E63946' }}>A</span>ZOO
+          </div>
           <ul style={{ ...styles.navLinks, display: isMobile ? 'none' : 'flex' }}>
             <li>
               <Link to="/livreur/commandes" style={{ ...styles.link, ...(isActive('/livreur/commandes') ? styles.linkActif : {}) }}>
@@ -291,11 +296,10 @@ const Navbar = () => {
     return (
       <>
         <nav style={styles.navbar}>
-         <div style={styles.logo}>
-  <img src="/logo.png"  style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
-  BAY<span style={{ color: '#E63946' }}>A</span>ZOO
-  <span style={{ ...styles.roleBadgeBase, background: '...' }}>...</span>
-</div>
+          <div style={styles.logo}>
+            <img src="/logo.png" alt="BAYAZOO" style={{ height: '38px', width: 'auto', objectFit: 'contain' }} />
+            BAY<span style={{ color: '#E63946' }}>A</span>ZOO
+          </div>
           <ul style={{ ...styles.navLinks, display: isMobile ? 'none' : 'flex' }}>
             {[
               { to: '/admin', label: 'Dashboard' },
@@ -363,10 +367,10 @@ const Navbar = () => {
   return (
     <>
       <nav style={styles.navbar}>
-       <Link to="/" style={styles.logo} onClick={() => setMenuOpen(false)}>
-  <img src="/logo.png"  style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
-  BAYAZOO
-</Link>
+        <Link to="/" style={styles.logo} onClick={() => setMenuOpen(false)}>
+          <img src="/logo.png" alt="BAYAZOO" style={{ height: '42px', width: 'auto', objectFit: 'contain' }} />
+          BAYAZOO
+        </Link>
         <ul style={{ ...styles.navLinks, display: isMobile ? 'none' : 'flex' }}>
           <li><Link to="/" style={{ ...styles.link, ...(isActive('/') ? styles.linkActif : {}) }}>Accueil</Link></li>
           <li><Link to="/menu" style={{ ...styles.link, ...(isActive('/menu') ? styles.linkActif : {}) }}>Menu</Link></li>
@@ -383,8 +387,10 @@ const Navbar = () => {
                 </Link>
               </li>
               <li style={styles.userBox}>
-                <div style={styles.userAvatar}>{user.nom.charAt(0).toUpperCase()}</div>
-                <span style={styles.userName}>{user.nom}</span>
+                <Link to="/profil" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={styles.userAvatar}>{user.nom.charAt(0).toUpperCase()}</div>
+                  <span style={styles.userName}>{user.nom}</span>
+                </Link>
                 <button style={styles.logoutBtn} onClick={handleLogout}>Deconnexion</button>
               </li>
             </>
@@ -438,12 +444,14 @@ const Navbar = () => {
             ))}
             {user ? (
               <>
-                <Link to="/suivi"
-                  style={{ ...styles.mobileLink, ...(isActive('/suivi') ? styles.mobileLinkActive : {}) }}
-                  onClick={() => setMenuOpen(false)}>
+                <Link to="/suivi" style={{ ...styles.mobileLink, ...(isActive('/suivi') ? styles.mobileLinkActive : {}) }} onClick={() => setMenuOpen(false)}>
                   <div style={styles.mobileLinkIcon}><IconOrders active={isActive('/suivi')} /></div>
                   Mes commandes
                   {totalNonLus > 0 && <span style={styles.mobileBadge}>{totalNonLus}</span>}
+                </Link>
+                <Link to="/profil" style={{ ...styles.mobileLink, ...(isActive('/profil') ? styles.mobileLinkActive : {}) }} onClick={() => setMenuOpen(false)}>
+                  <div style={styles.mobileLinkIcon}><IconProfil active={isActive('/profil')} /></div>
+                  Mon profil
                 </Link>
                 <div style={styles.mobileDivider} />
                 <button style={styles.mobileLogoutBtn} onClick={handleLogout}>Se deconnecter</button>
@@ -464,12 +472,16 @@ const Navbar = () => {
         )}
       </nav>
 
+      {/* ✅ BOTTOM NAV CLIENT */}
       <div style={{ ...styles.bottomNav, display: isMobile ? 'flex' : 'none' }}>
         <BottomNavItem to="/" icon={<IconHome active={isActive('/')} />} label="Accueil" />
         <BottomNavItem to="/menu" icon={<IconMenu active={isActive('/menu')} />} label="Menu" />
         <BottomNavItem to="/panier" icon={<IconCart active={isActive('/panier')} />} label="Panier" badge={nombreArticles} />
         {user ? (
-          <BottomNavItem to="/suivi" icon={<IconOrders active={isActive('/suivi')} />} label="Commandes" badge={totalNonLus} />
+          <>
+            <BottomNavItem to="/suivi" icon={<IconOrders active={isActive('/suivi')} />} label="Commandes" badge={totalNonLus} />
+            <BottomNavItem to="/profil" icon={<IconProfil active={isActive('/profil')} />} label="Profil" />
+          </>
         ) : (
           <BottomNavItem to="/login" icon={<IconLogin active={isActive('/login')} />} label="Connexion" />
         )}
@@ -602,14 +614,14 @@ const styles = {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     gap: '0.25rem', padding: '0.3rem 0.8rem', textDecoration: 'none',
     color: '#999', fontFamily: "'Inter', sans-serif",
-    position: 'relative', minWidth: '60px', transition: 'all 0.2s ease'
+    position: 'relative', minWidth: '55px', transition: 'all 0.2s ease'
   },
   bottomItemActive: { color: '#E63946' },
   bottomItemBtn: {
     display: 'flex', flexDirection: 'column', alignItems: 'center',
     gap: '0.25rem', padding: '0.3rem 0.8rem', background: 'none',
     border: 'none', cursor: 'pointer', color: '#999',
-    fontFamily: "'Inter', sans-serif", minWidth: '60px'
+    fontFamily: "'Inter', sans-serif", minWidth: '55px'
   },
   bottomIconWrap: {
     position: 'relative', display: 'flex',
