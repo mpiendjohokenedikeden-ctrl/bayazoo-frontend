@@ -24,6 +24,8 @@ const Dashboard = () => {
   const [notification, setNotification] = useState(null);
   const [remiseAConfirmer, setRemiseAConfirmer] = useState(null);
   const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+  // ✅ State pour confirmation suppression inline
+  const [commandeASupprimer, setCommandeASupprimer] = useState(null);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth <= 768);
@@ -57,11 +59,12 @@ const Dashboard = () => {
     setLoading(false);
   };
 
+  // ✅ Suppression sans window.confirm — confirmation inline
   const supprimerCommande = async (id) => {
-    if (window.confirm('Supprimer cette commande ?')) {
-      await deleteOrder(id);
-      chargerDonnees();
-    }
+    await deleteOrder(id);
+    setCommandeASupprimer(null);
+    chargerDonnees();
+    afficherNotif('🗑️ Commande supprimee.');
   };
 
   const validerPaiementEspeces = async (id) => {
@@ -117,17 +120,28 @@ const Dashboard = () => {
     for (let i = 6; i >= 0; i--) { const date = new Date(); date.setDate(date.getDate() - i); jours.push(date); }
     return jours;
   };
-  const getDerniers30Jours = () => {
+
+  // ✅ Mois en cours — du 1er du mois à aujourd'hui
+  const getJoursMoisEnCours = () => {
     const jours = [];
-    for (let i = 29; i >= 0; i--) { const date = new Date(); date.setDate(date.getDate() - i); jours.push(date); }
+    const maintenant = new Date();
+    const premierDuMois = new Date(maintenant.getFullYear(), maintenant.getMonth(), 1);
+    const diff = Math.floor((maintenant - premierDuMois) / (1000 * 60 * 60 * 24));
+    for (let i = 0; i <= diff; i++) {
+      const date = new Date(premierDuMois);
+      date.setDate(premierDuMois.getDate() + i);
+      jours.push(date);
+    }
     return jours;
   };
+
   const getStatsJour = (date) => {
     const dateStr = date.toDateString();
     const cmdsJour = commandes.filter(c => new Date(c.createdAt).toDateString() === dateStr);
     const revenu = cmdsJour.filter(c => c.statut === 'payé').reduce((sum, c) => sum + parseFloat(c.total), 0);
     return { commandes: cmdsJour, total: cmdsJour.length, revenu };
   };
+
   const getRevenuParModeJour = (date) => {
     const dateStr = date.toDateString();
     const cmds = commandes.filter(c => new Date(c.createdAt).toDateString() === dateStr && c.statut === 'payé');
@@ -141,16 +155,20 @@ const Dashboard = () => {
   };
 
   const derniers7Jours = getDerniers7Jours();
-  const derniers30Jours = getDerniers30Jours();
+  const joursMoisEnCours = getJoursMoisEnCours();
   const statsJourSelectionne = getStatsJour(new Date(jourSelectionne));
   const maxCommandes = Math.max(...derniers7Jours.map(j => getStatsJour(j).total), 1);
   const max7JoursRevenu = Math.max(...derniers7Jours.map(j => getRevenuParModeJour(j).total), 1);
-  const max30JoursRevenu = Math.max(...derniers30Jours.map(j => getRevenuParModeJour(j).total), 1);
+  const maxMoisRevenu = Math.max(...joursMoisEnCours.map(j => getRevenuParModeJour(j).total), 1);
 
   const getCommandesPeriode = () => {
     if (periodeRevenu === 'aujourd') return commandesAujourdhui;
     if (periodeRevenu === 'semaine') { const d = new Date(); d.setDate(d.getDate() - 7); return commandes.filter(c => new Date(c.createdAt) >= d); }
-    if (periodeRevenu === 'mois') { const d = new Date(); d.setDate(d.getDate() - 30); return commandes.filter(c => new Date(c.createdAt) >= d); }
+    if (periodeRevenu === 'mois') {
+      // ✅ Mois calendaire en cours
+      const debut = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+      return commandes.filter(c => new Date(c.createdAt) >= debut);
+    }
     return commandes;
   };
 
@@ -175,6 +193,8 @@ const Dashboard = () => {
   const nbEspecesAffiche = statsCartes ? commandesPayeesPeriode.filter(c => new Date(c.createdAt).toDateString() === jourRevenuSelectionne && (c.modePaiement || '').toLowerCase().includes('espece')).length : nbEspeces;
   const getPctAffiche = (val) => revenuTotalAffiche > 0 ? Math.round((val / revenuTotalAffiche) * 100) : 0;
 
+  const nomMoisEnCours = new Date().toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+
   const statutCouleur = { 'en attente': '#FFB703', 'en préparation': '#FB8500', 'prêt': '#2D6A4F', 'en livraison': '#0077B6', 'livré': '#2D6A4F', 'payé': '#2D6A4F', 'annulé': '#E63946', 'en attente paiement': '#9C27B0' };
   const statutBadge = (s) => (
     <span style={{ background: statutCouleur[s] || '#888', color: 'white', padding: '0.25rem 0.8rem', borderRadius: '100px', fontSize: '0.72rem', fontWeight: '700', whiteSpace: 'nowrap', fontFamily: F.corps }}>
@@ -182,8 +202,22 @@ const Dashboard = () => {
     </span>
   );
 
-  // ✅ Rendu d'une ligne de commande : carte mobile ou grille desktop
+  // ✅ Confirmation suppression inline
+  const ConfirmSupprimer = ({ cmd }) => (
+    <div style={styles.confirmBox}>
+      <p style={styles.confirmTitre}>⚠️ Supprimer cette commande ?</p>
+      <p style={styles.confirmSub}>Commande <strong>#{cmd.codeCommande}</strong> — {cmd.client?.nom || 'Client'}. Cette action est irreversible.</p>
+      <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem' }}>
+        <button style={{ ...styles.validerBtn, flex: 1, background: 'linear-gradient(135deg, #E63946, #c0303c)', boxShadow: '0 4px 12px rgba(230,57,70,0.3)' }} onClick={() => supprimerCommande(cmd.id)}>
+          🗑️ Oui, supprimer
+        </button>
+        <button style={styles.annulerConfirmBtn} onClick={() => setCommandeASupprimer(null)}>Annuler</button>
+      </div>
+    </div>
+  );
+
   const RowCommande = ({ cmd, avecHeure = false }) => {
+    const estASupprimer = commandeASupprimer?.id === cmd.id;
     if (isMobile) {
       return (
         <div style={styles.mobileCard}>
@@ -195,47 +229,46 @@ const Dashboard = () => {
           <p style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600', marginBottom: '0.2rem' }}>
             {cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}
           </p>
-          {avecHeure && (
-            <p style={{ color: '#aaa', fontSize: '0.75rem', fontFamily: F.corps, marginBottom: '0.2rem' }}>
-              🕐 {new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-            </p>
-          )}
+          {avecHeure && <p style={{ color: '#aaa', fontSize: '0.75rem', fontFamily: F.corps, marginBottom: '0.2rem' }}>🕐 {new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>}
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
-            <span style={{ color: '#E63946', fontWeight: '800', fontFamily: F.corps, fontSize: '0.95rem' }}>
-              {parseFloat(cmd.total).toLocaleString()} FCFA
-            </span>
-            <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+            <span style={{ color: '#E63946', fontWeight: '800', fontFamily: F.corps, fontSize: '0.95rem' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
+            <button style={styles.deleteBtn} onClick={() => setCommandeASupprimer(estASupprimer ? null : cmd)}>🗑️</button>
           </div>
+          {estASupprimer && <ConfirmSupprimer cmd={cmd} />}
         </div>
       );
     }
-    // Desktop — grille
     if (avecHeure) {
       return (
-        <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 44px' }}>
+        <>
+          <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 44px' }}>
+            <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
+            <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
+            <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
+            <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
+            <span>{statutBadge(cmd.statut)}</span>
+            <span style={{ color: '#aaa', fontSize: '0.78rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+            <button style={styles.deleteBtn} onClick={() => setCommandeASupprimer(estASupprimer ? null : cmd)}>🗑️</button>
+          </div>
+          {estASupprimer && <div style={{ padding: '0 1.5rem 1rem' }}><ConfirmSupprimer cmd={cmd} /></div>}
+        </>
+      );
+    }
+    return (
+      <>
+        <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 44px' }}>
           <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
           <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
           <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
           <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
           <span>{statutBadge(cmd.statut)}</span>
-          <span style={{ color: '#aaa', fontSize: '0.78rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-          <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+          <button style={styles.deleteBtn} onClick={() => setCommandeASupprimer(estASupprimer ? null : cmd)}>🗑️</button>
         </div>
-      );
-    }
-    return (
-      <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 44px' }}>
-        <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
-        <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
-        <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
-        <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
-        <span>{statutBadge(cmd.statut)}</span>
-        <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
-      </div>
+        {estASupprimer && <div style={{ padding: '0 1.5rem 1rem' }}><ConfirmSupprimer cmd={cmd} /></div>}
+      </>
     );
   };
 
-  // ✅ Rendu d'une ligne de paiement revenus
   const RowPaiement = ({ cmd }) => {
     const mp = (cmd.modePaiement || '').toLowerCase();
     if (isMobile) {
@@ -278,18 +311,9 @@ const Dashboard = () => {
     if (!notification) return null;
     const estErreur = notification.type === 'error';
     return (
-      <div style={{
-        background: estErreur ? 'linear-gradient(135deg, #fff0f0, #ffe0e0)' : 'linear-gradient(135deg, #f0faf5, #d4edda)',
-        border: '1.5px solid ' + (estErreur ? '#ffd0d0' : '#b7e4c7'),
-        borderRadius: '16px', padding: '1rem 1.5rem', marginBottom: '1.5rem',
-        display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem',
-        color: estErreur ? '#c00' : '#2D6A4F', fontWeight: '700',
-        fontFamily: F.corps, fontSize: '0.92rem',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.08)'
-      }}>
+      <div style={{ background: estErreur ? 'linear-gradient(135deg, #fff0f0, #ffe0e0)' : 'linear-gradient(135deg, #f0faf5, #d4edda)', border: '1.5px solid ' + (estErreur ? '#ffd0d0' : '#b7e4c7'), borderRadius: '16px', padding: '1rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', color: estErreur ? '#c00' : '#2D6A4F', fontWeight: '700', fontFamily: F.corps, fontSize: '0.92rem', boxShadow: '0 4px 16px rgba(0,0,0,0.08)' }}>
         <span>{notification.message}</span>
-        <button onClick={() => setNotification(null)}
-          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'inherit', opacity: 0.6, fontWeight: '700' }}>✕</button>
+        <button onClick={() => setNotification(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '1.1rem', color: 'inherit', opacity: 0.6, fontWeight: '700' }}>✕</button>
       </div>
     );
   };
@@ -319,11 +343,7 @@ const Dashboard = () => {
         ].map(o => (
           <button key={o.key} style={{ ...styles.onglet, ...(onglet === o.key ? styles.ongletActif : {}), position: 'relative' }} onClick={() => setOnglet(o.key)}>
             {o.label}
-            {o.badge > 0 && (
-              <span style={{ background: '#9C27B0', color: 'white', borderRadius: '100px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 7px', marginLeft: '0.4rem' }}>
-                {o.badge}
-              </span>
-            )}
+            {o.badge > 0 && <span style={{ background: '#9C27B0', color: 'white', borderRadius: '100px', fontSize: '0.65rem', fontWeight: '800', padding: '1px 7px', marginLeft: '0.4rem' }}>{o.badge}</span>}
           </button>
         ))}
       </div>
@@ -334,6 +354,7 @@ const Dashboard = () => {
         <>
           {onglet === 'overview' && (
             <>
+              <Notification />
               <div style={styles.statsGrid}>
                 {[
                   { num: commandesEnAttente, label: 'En attente', color: '#FFB703', icon: '⏳' },
@@ -385,15 +406,11 @@ const Dashboard = () => {
               <Notification />
               {remisesEnAttente.length > 0 && (
                 <div style={{ marginBottom: '2rem' }}>
-                  <h2 style={styles.sectionTitle}>
-                    💸 Remises especes <span style={{ color: '#FFB703' }}>a confirmer ({remisesEnAttente.length})</span>
-                  </h2>
+                  <h2 style={styles.sectionTitle}>💸 Remises especes <span style={{ color: '#FFB703' }}>a confirmer ({remisesEnAttente.length})</span></h2>
                   <div style={styles.remiseBanniere}>
                     <span style={{ fontSize: '1.5rem' }}>🛵</span>
                     <div>
-                      <p style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.2rem' }}>
-                        {remisesEnAttente.length} livreur(s) vous ont remis des especes
-                      </p>
+                      <p style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.2rem' }}>{remisesEnAttente.length} livreur(s) vous ont remis des especes</p>
                       <p style={{ fontSize: '0.82rem', opacity: 0.85 }}>Confirmez la reception pour remettre leur solde a zero.</p>
                     </div>
                   </div>
@@ -409,23 +426,17 @@ const Dashboard = () => {
                                 <p style={{ color: '#888', fontSize: '0.78rem' }}>📞 {remise.livreur?.telephone || 'Non renseigne'}</p>
                               </div>
                             </div>
-                            <p style={{ color: '#888', fontSize: '0.78rem' }}>
-                              🕐 {new Date(remise.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — {new Date(remise.createdAt).toLocaleDateString('fr-FR')}
-                            </p>
+                            <p style={{ color: '#888', fontSize: '0.78rem' }}>🕐 {new Date(remise.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })} — {new Date(remise.createdAt).toLocaleDateString('fr-FR')}</p>
                           </div>
                           <div style={{ textAlign: 'right' }}>
                             <p style={{ fontSize: '0.78rem', color: '#888', marginBottom: '0.3rem' }}>Montant a recevoir</p>
-                            <p style={{ fontWeight: '900', fontSize: '1.6rem', color: '#FFB703', letterSpacing: '-0.02em' }}>
-                              {parseFloat(remise.montant).toLocaleString()} FCFA
-                            </p>
+                            <p style={{ fontWeight: '900', fontSize: '1.6rem', color: '#FFB703', letterSpacing: '-0.02em' }}>{parseFloat(remise.montant).toLocaleString()} FCFA</p>
                           </div>
                         </div>
                         {remiseAConfirmer?.id === remise.id ? (
                           <div style={styles.confirmBox}>
                             <p style={styles.confirmTitre}>⚠️ Confirmer la reception ?</p>
-                            <p style={styles.confirmSub}>
-                              Vous confirmez avoir recu <strong>{parseFloat(remise.montant).toLocaleString()} FCFA</strong> de <strong>{remise.livreur?.nom}</strong> en especes. Le solde passera a 0.
-                            </p>
+                            <p style={styles.confirmSub}>Vous confirmez avoir recu <strong>{parseFloat(remise.montant).toLocaleString()} FCFA</strong> de <strong>{remise.livreur?.nom}</strong>. Le solde passera a 0.</p>
                             <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem' }}>
                               <button style={{ ...styles.confirmerRemiseBtn, flex: 1, marginTop: 0, opacity: loadingConfirm === remise.id ? 0.6 : 1 }} onClick={confirmerRemise} disabled={loadingConfirm === remise.id}>
                                 {loadingConfirm === remise.id ? 'Confirmation...' : '✅ Oui, confirmer'}
@@ -555,12 +566,18 @@ const Dashboard = () => {
             <>
               <h2 style={styles.sectionTitle}>Revenus par <span style={{ color: '#E63946' }}>mode de paiement</span></h2>
               <div style={styles.periodeSwitch}>
-                {[{ key: 'aujourd', label: "Aujourd'hui" }, { key: 'semaine', label: '7 derniers jours' }, { key: 'mois', label: '30 derniers jours' }].map(p => (
+                {[
+                  { key: 'aujourd', label: "Aujourd'hui" },
+                  { key: 'semaine', label: '7 derniers jours' },
+                  { key: 'mois', label: nomMoisEnCours }
+                ].map(p => (
                   <button key={p.key} style={{ ...styles.periodeBtn, ...(periodeRevenu === p.key ? styles.periodeBtnActif : {}) }} onClick={() => { setPeriodeRevenu(p.key); setJourRevenuSelectionne(null); }}>{p.label}</button>
                 ))}
               </div>
               <div style={styles.totalGlobal}>
-                <p style={styles.totalGlobalLabel}>Total encaisse — {periodeRevenu === 'aujourd' ? "Aujourd'hui" : periodeRevenu === 'semaine' ? (jourRevenuSelectionne ? new Date(jourRevenuSelectionne).toLocaleDateString('fr-FR') : '7 derniers jours') : '30 derniers jours'}</p>
+                <p style={styles.totalGlobalLabel}>
+                  Total encaisse — {periodeRevenu === 'aujourd' ? "Aujourd'hui" : periodeRevenu === 'semaine' ? (jourRevenuSelectionne ? new Date(jourRevenuSelectionne).toLocaleDateString('fr-FR') : '7 derniers jours') : nomMoisEnCours}
+                </p>
                 <p style={styles.totalGlobalVal}>{revenuTotalAffiche.toLocaleString()} FCFA</p>
                 <p style={styles.totalGlobalSub}>
                   {statsCartes ? statsCartes.nb : commandesPayeesPeriode.length} commande(s) payee(s)
@@ -615,16 +632,16 @@ const Dashboard = () => {
 
               {periodeRevenu === 'mois' && (
                 <div style={styles.graphCard}>
-                  <p style={{ fontFamily: F.titre, fontWeight: '700', fontSize: '1rem', color: '#0d0d0d', marginBottom: '0.3rem' }}>Bilan 30 jours</p>
+                  <p style={{ fontFamily: F.titre, fontWeight: '700', fontSize: '1rem', color: '#0d0d0d', marginBottom: '0.3rem' }}>Bilan — {nomMoisEnCours}</p>
                   <p style={{ fontFamily: F.corps, fontSize: '0.78rem', color: '#aaa', marginBottom: '1rem' }}>Cliquez sur un jour pour voir ses stats en detail</p>
-                  <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '0.15rem', marginBottom: '0.5rem' }}>
-                    {derniers30Jours.map((date, i) => {
+                  <div style={{ display: 'flex', alignItems: 'flex-end', height: '120px', gap: '0.15rem', marginBottom: '0.5rem', overflowX: 'auto' }}>
+                    {joursMoisEnCours.map((date, i) => {
                       const r = getRevenuParModeJour(date);
-                      const hauteur = (r.total / max30JoursRevenu) * 100;
+                      const hauteur = (r.total / maxMoisRevenu) * 100;
                       const estSel = jourRevenuSelectionne === date.toDateString();
                       const estAujourdhui = date.toDateString() === aujourd;
                       return (
-                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flex: 1 }} onClick={() => setJourRevenuSelectionne(estSel ? null : date.toDateString())}>
+                        <div key={i} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flex: 1, minWidth: '20px' }} onClick={() => setJourRevenuSelectionne(estSel ? null : date.toDateString())}>
                           <div style={{ width: '100%', height: '90px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
                             <div style={{ width: '70%', borderRadius: '3px 3px 0 0', minHeight: '3px', height: Math.max(hauteur, 3) + '%', background: estSel ? '#E63946' : estAujourdhui ? '#FFB703' : '#1A1A2E', opacity: estSel ? 1 : 0.7, transition: 'all 0.3s' }} />
                           </div>
@@ -652,7 +669,7 @@ const Dashboard = () => {
                     </div>
                   )}
                   <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1.5px solid #f0f0f0' }}>
-                    <p style={{ fontFamily: F.titre, fontWeight: '700', fontSize: '0.95rem', color: '#0d0d0d', marginBottom: '1rem' }}>Recap mensuel par mode de paiement</p>
+                    <p style={{ fontFamily: F.titre, fontWeight: '700', fontSize: '0.95rem', color: '#0d0d0d', marginBottom: '1rem' }}>Recap {nomMoisEnCours} par mode de paiement</p>
                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '0.8rem' }}>
                       {[{ label: 'Airtel Money', val: revenuAirtel, nb: nbAirtel, color: '#E63946', logo: '/images/airtel.png' }, { label: 'Moov Money', val: revenuMoov, nb: nbMoov, color: '#0077B6', logo: '/images/moov.png' }, { label: 'Especes', val: revenuEspeces, nb: nbEspeces, color: '#2D6A4F', emoji: '💵' }].map((m, i) => (
                         <div key={i} style={{ background: '#f9f9f9', borderRadius: '14px', padding: '1rem', textAlign: 'center', border: '1.5px solid #e8e8ed' }}>
