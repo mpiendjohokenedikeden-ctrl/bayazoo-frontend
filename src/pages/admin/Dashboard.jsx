@@ -23,6 +23,13 @@ const Dashboard = () => {
   const [loadingConfirm, setLoadingConfirm] = useState(null);
   const [notification, setNotification] = useState(null);
   const [remiseAConfirmer, setRemiseAConfirmer] = useState(null);
+  const [isMobile, setIsMobile] = useState(window.innerWidth <= 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth <= 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   useEffect(() => {
     chargerDonnees();
@@ -175,6 +182,98 @@ const Dashboard = () => {
     </span>
   );
 
+  // ✅ Rendu d'une ligne de commande : carte mobile ou grille desktop
+  const RowCommande = ({ cmd, avecHeure = false }) => {
+    if (isMobile) {
+      return (
+        <div style={styles.mobileCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+            <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
+            {statutBadge(cmd.statut)}
+          </div>
+          <p style={{ ...styles.cellTxt, marginBottom: '0.2rem' }}>👤 {cmd.client?.nom || cmd.clientNom || 'Client'}</p>
+          <p style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600', marginBottom: '0.2rem' }}>
+            {cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}
+          </p>
+          {avecHeure && (
+            <p style={{ color: '#aaa', fontSize: '0.75rem', fontFamily: F.corps, marginBottom: '0.2rem' }}>
+              🕐 {new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
+            </p>
+          )}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '0.5rem' }}>
+            <span style={{ color: '#E63946', fontWeight: '800', fontFamily: F.corps, fontSize: '0.95rem' }}>
+              {parseFloat(cmd.total).toLocaleString()} FCFA
+            </span>
+            <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+          </div>
+        </div>
+      );
+    }
+    // Desktop — grille
+    if (avecHeure) {
+      return (
+        <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 44px' }}>
+          <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
+          <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
+          <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
+          <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
+          <span>{statutBadge(cmd.statut)}</span>
+          <span style={{ color: '#aaa', fontSize: '0.78rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
+          <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+        </div>
+      );
+    }
+    return (
+      <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 44px' }}>
+        <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
+        <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
+        <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
+        <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
+        <span>{statutBadge(cmd.statut)}</span>
+        <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+      </div>
+    );
+  };
+
+  // ✅ Rendu d'une ligne de paiement revenus
+  const RowPaiement = ({ cmd }) => {
+    const mp = (cmd.modePaiement || '').toLowerCase();
+    if (isMobile) {
+      return (
+        <div style={styles.mobileCard}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+            <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
+            <span style={{ color: '#aaa', fontSize: '0.75rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleDateString('fr-FR')}</span>
+          </div>
+          <p style={{ ...styles.cellTxt, marginBottom: '0.3rem' }}>👤 {cmd.client?.nom || cmd.clientNom || 'Client'}</p>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+              {mp.includes('airtel') && <img src="/images/airtel.png" alt="Airtel" style={{ width: '18px', height: '18px', borderRadius: '4px' }} />}
+              {mp.includes('moov') && <img src="/images/moov.png" alt="Moov" style={{ width: '18px', height: '18px', borderRadius: '4px' }} />}
+              {mp.includes('espece') && <span>💵</span>}
+              <span style={styles.cellTxt}>{cmd.modePaiement}</span>
+            </div>
+            <span style={{ color: '#E63946', fontWeight: '800', fontFamily: F.corps }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
+          </div>
+        </div>
+      );
+    }
+    return (
+      <div style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr' }}>
+        <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
+        <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+          {mp.includes('airtel') && <img src="/images/airtel.png" alt="Airtel" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain' }} />}
+          {mp.includes('moov') && <img src="/images/moov.png" alt="Moov" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain' }} />}
+          {mp.includes('espece') && <span>💵</span>}
+          <span style={styles.cellTxt}>{cmd.modePaiement}</span>
+        </span>
+        <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
+        <span style={{ color: '#aaa', fontSize: '0.78rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleDateString('fr-FR')}</span>
+      </div>
+    );
+  };
+
   const Notification = () => {
     if (!notification) return null;
     const estErreur = notification.type === 'error';
@@ -270,19 +369,12 @@ const Dashboard = () => {
                 <div style={styles.empty}><p style={{ fontSize: '2rem' }}>📋</p><p style={{ marginTop: '0.5rem' }}>Aucune commande aujourd'hui</p></div>
               ) : (
                 <div style={styles.tableWrap}>
-                  <div style={{ ...styles.tableHeader, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 44px' }}>
-                    <span>Code</span><span>Client</span><span>Livreur</span><span>Total</span><span>Statut</span><span></span>
-                  </div>
-                  {commandesAujourdhui.map(cmd => (
-                    <div key={cmd.id} style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 44px' }}>
-                      <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
-                      <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
-                      <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
-                      <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
-                      <span>{statutBadge(cmd.statut)}</span>
-                      <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+                  {!isMobile && (
+                    <div style={{ ...styles.tableHeader, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 44px' }}>
+                      <span>Code</span><span>Client</span><span>Livreur</span><span>Total</span><span>Statut</span><span></span>
                     </div>
-                  ))}
+                  )}
+                  {commandesAujourdhui.map(cmd => <RowCommande key={cmd.id} cmd={cmd} />)}
                 </div>
               )}
             </>
@@ -291,7 +383,6 @@ const Dashboard = () => {
           {onglet === 'caisse' && (
             <>
               <Notification />
-
               {remisesEnAttente.length > 0 && (
                 <div style={{ marginBottom: '2rem' }}>
                   <h2 style={styles.sectionTitle}>
@@ -303,9 +394,7 @@ const Dashboard = () => {
                       <p style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.2rem' }}>
                         {remisesEnAttente.length} livreur(s) vous ont remis des especes
                       </p>
-                      <p style={{ fontSize: '0.82rem', opacity: 0.85 }}>
-                        Confirmez la reception pour remettre leur solde a zero.
-                      </p>
+                      <p style={{ fontSize: '0.82rem', opacity: 0.85 }}>Confirmez la reception pour remettre leur solde a zero.</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
@@ -331,37 +420,21 @@ const Dashboard = () => {
                             </p>
                           </div>
                         </div>
-
-                        {/* ✅ CONFIRMATION INLINE */}
                         {remiseAConfirmer?.id === remise.id ? (
                           <div style={styles.confirmBox}>
                             <p style={styles.confirmTitre}>⚠️ Confirmer la reception ?</p>
                             <p style={styles.confirmSub}>
-                              Vous confirmez avoir recu <strong>{parseFloat(remise.montant).toLocaleString()} FCFA</strong> de <strong>{remise.livreur?.nom}</strong> en especes. Le solde du livreur passera a 0.
+                              Vous confirmez avoir recu <strong>{parseFloat(remise.montant).toLocaleString()} FCFA</strong> de <strong>{remise.livreur?.nom}</strong> en especes. Le solde passera a 0.
                             </p>
                             <div style={{ display: 'flex', gap: '0.8rem', marginTop: '1rem' }}>
-                              <button
-                                style={{ ...styles.confirmerRemiseBtn, flex: 1, marginTop: 0, opacity: loadingConfirm === remise.id ? 0.6 : 1 }}
-                                onClick={confirmerRemise}
-                                disabled={loadingConfirm === remise.id}
-                              >
+                              <button style={{ ...styles.confirmerRemiseBtn, flex: 1, marginTop: 0, opacity: loadingConfirm === remise.id ? 0.6 : 1 }} onClick={confirmerRemise} disabled={loadingConfirm === remise.id}>
                                 {loadingConfirm === remise.id ? 'Confirmation...' : '✅ Oui, confirmer'}
                               </button>
-                              <button
-                                style={styles.annulerConfirmBtn}
-                                onClick={() => setRemiseAConfirmer(null)}
-                                disabled={loadingConfirm === remise.id}
-                              >
-                                Annuler
-                              </button>
+                              <button style={styles.annulerConfirmBtn} onClick={() => setRemiseAConfirmer(null)} disabled={loadingConfirm === remise.id}>Annuler</button>
                             </div>
                           </div>
                         ) : (
-                          <button
-                            style={{ ...styles.confirmerRemiseBtn, opacity: loadingConfirm === remise.id ? 0.6 : 1 }}
-                            onClick={() => setRemiseAConfirmer(remise)}
-                            disabled={loadingConfirm === remise.id}
-                          >
+                          <button style={{ ...styles.confirmerRemiseBtn, opacity: loadingConfirm === remise.id ? 0.6 : 1 }} onClick={() => setRemiseAConfirmer(remise)} disabled={loadingConfirm === remise.id}>
                             ✅ Confirmer la reception de {parseFloat(remise.montant).toLocaleString()} FCFA
                           </button>
                         )}
@@ -371,75 +444,42 @@ const Dashboard = () => {
                   <div style={styles.separateur} />
                 </div>
               )}
-
-              <h2 style={styles.sectionTitle}>
-                Paiements <span style={{ color: '#9C27B0' }}>Especes a valider</span>
-              </h2>
+              <h2 style={styles.sectionTitle}>Paiements <span style={{ color: '#9C27B0' }}>Especes a valider</span></h2>
               <div style={styles.searchBar}>
                 <span>🔍</span>
-                <input
-                  style={styles.searchInput}
-                  type="text"
-                  placeholder="Rechercher par code BZ..."
-                  value={rechercheCaisse}
-                  onChange={e => setRechercheCaisse(e.target.value.toUpperCase())}
-                />
+                <input style={styles.searchInput} type="text" placeholder="Rechercher par code BZ..." value={rechercheCaisse} onChange={e => setRechercheCaisse(e.target.value.toUpperCase())} />
                 {rechercheCaisse && <button style={styles.clearBtn} onClick={() => setRechercheCaisse('')}>✕</button>}
               </div>
               {commandesAttentesPaiementFiltrees.length === 0 ? (
                 <div style={styles.empty}>
                   <p style={{ fontSize: '3rem' }}>{commandesAttentesPaiement.length === 0 ? '✅' : '🔍'}</p>
-                  <p style={{ marginTop: '0.5rem' }}>
-                    {commandesAttentesPaiement.length === 0 ? 'Aucun paiement en attente' : 'Aucun resultat pour "' + rechercheCaisse + '"'}
-                  </p>
-                  {commandesAttentesPaiement.length === 0 && (
-                    <p style={{ fontSize: '0.85rem', color: '#bbb', marginTop: '0.3rem' }}>Toutes les commandes especes ont ete validees</p>
-                  )}
+                  <p style={{ marginTop: '0.5rem' }}>{commandesAttentesPaiement.length === 0 ? 'Aucun paiement en attente' : 'Aucun resultat pour "' + rechercheCaisse + '"'}</p>
+                  {commandesAttentesPaiement.length === 0 && <p style={{ fontSize: '0.85rem', color: '#bbb', marginTop: '0.3rem' }}>Toutes les commandes especes ont ete validees</p>}
                 </div>
               ) : (
                 <>
                   <div style={styles.caisseBanniere}>
                     <span style={{ fontSize: '1.5rem' }}>💵</span>
                     <div>
-                      <p style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.2rem' }}>
-                        {commandesAttentesPaiementFiltrees.length} commande(s) en attente de paiement especes
-                      </p>
-                      <p style={{ fontSize: '0.82rem', opacity: 0.85 }}>
-                        Le client a paye a la caisse ? Cliquez sur "Valider le paiement" pour confirmer.
-                      </p>
+                      <p style={{ fontWeight: '700', fontSize: '0.95rem', marginBottom: '0.2rem' }}>{commandesAttentesPaiementFiltrees.length} commande(s) en attente de paiement especes</p>
+                      <p style={{ fontSize: '0.82rem', opacity: 0.85 }}>Le client a paye a la caisse ? Cliquez sur "Valider le paiement" pour confirmer.</p>
                     </div>
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                     {commandesAttentesPaiementFiltrees.map(cmd => (
                       <div key={cmd.id} style={{ ...styles.caisseCard, borderLeft: '4px solid #9C27B0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
                           <div>
                             <h3 style={{ fontFamily: F.titre, fontSize: '1.2rem', color: '#0d0d0d', marginBottom: '0.3rem' }}>#{cmd.codeCommande}</h3>
-                            <p style={{ color: '#aaa', fontSize: '0.8rem', fontFamily: F.corps }}>
-                              📅 {new Date(cmd.createdAt).toLocaleDateString('fr-FR')} à {new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}
-                            </p>
+                            <p style={{ color: '#aaa', fontSize: '0.8rem', fontFamily: F.corps }}>📅 {new Date(cmd.createdAt).toLocaleDateString('fr-FR')} à {new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</p>
                           </div>
-                          <span style={{ background: '#9C27B0', color: 'white', padding: '0.3rem 0.9rem', borderRadius: '100px', fontSize: '0.78rem', fontWeight: '700', fontFamily: F.corps }}>
-                            💵 Att. paiement
-                          </span>
+                          <span style={{ background: '#9C27B0', color: 'white', padding: '0.3rem 0.9rem', borderRadius: '100px', fontSize: '0.78rem', fontWeight: '700', fontFamily: F.corps }}>💵 Att. paiement</span>
                         </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '0.8rem', background: '#f9f9f9', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
-                          <div>
-                            <p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Client</p>
-                            <p style={{ fontWeight: '600', color: '#333', fontFamily: F.corps, fontSize: '0.88rem' }}>👤 {cmd.client?.nom || cmd.clientNom || 'Client'}</p>
-                          </div>
-                          <div>
-                            <p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Mode</p>
-                            <p style={{ fontWeight: '600', color: '#333', fontFamily: F.corps, fontSize: '0.88rem' }}>🏪 Retrait</p>
-                          </div>
-                          <div>
-                            <p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Paiement</p>
-                            <p style={{ fontWeight: '600', color: '#333', fontFamily: F.corps, fontSize: '0.88rem' }}>💵 Especes</p>
-                          </div>
-                          <div>
-                            <p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Total</p>
-                            <p style={{ fontWeight: '800', color: '#E63946', fontFamily: F.corps, fontSize: '1.1rem' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</p>
-                          </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: '0.8rem', background: '#f9f9f9', borderRadius: '12px', padding: '1rem', marginBottom: '1rem' }}>
+                          <div><p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Client</p><p style={{ fontWeight: '600', color: '#333', fontFamily: F.corps, fontSize: '0.88rem' }}>👤 {cmd.client?.nom || cmd.clientNom || 'Client'}</p></div>
+                          <div><p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Mode</p><p style={{ fontWeight: '600', color: '#333', fontFamily: F.corps, fontSize: '0.88rem' }}>🏪 Retrait</p></div>
+                          <div><p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Paiement</p><p style={{ fontWeight: '600', color: '#333', fontFamily: F.corps, fontSize: '0.88rem' }}>💵 Especes</p></div>
+                          <div><p style={{ color: '#bbb', fontSize: '0.7rem', fontFamily: F.corps, textTransform: 'uppercase', marginBottom: '0.3rem' }}>Total</p><p style={{ fontWeight: '800', color: '#E63946', fontFamily: F.corps, fontSize: '1.1rem' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</p></div>
                         </div>
                         {cmd.items && cmd.items.length > 0 && (
                           <div style={{ background: '#fffbf0', borderRadius: '12px', padding: '0.8rem', marginBottom: '1rem', border: '1px solid #ffe0a0' }}>
@@ -452,9 +492,7 @@ const Dashboard = () => {
                             ))}
                           </div>
                         )}
-                        <button style={styles.validerBtn} onClick={() => validerPaiementEspeces(cmd.id)}>
-                          ✅ Valider le paiement — {parseFloat(cmd.total).toLocaleString()} FCFA recu
-                        </button>
+                        <button style={styles.validerBtn} onClick={() => validerPaiementEspeces(cmd.id)}>✅ Valider le paiement — {parseFloat(cmd.total).toLocaleString()} FCFA recu</button>
                       </div>
                     ))}
                   </div>
@@ -502,20 +540,12 @@ const Dashboard = () => {
               </div>
               {statsJourSelectionne.commandes.length > 0 && (
                 <div style={styles.tableWrap}>
-                  <div style={{ ...styles.tableHeader, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 44px' }}>
-                    <span>Code</span><span>Client</span><span>Livreur</span><span>Total</span><span>Statut</span><span>Heure</span><span></span>
-                  </div>
-                  {statsJourSelectionne.commandes.map(cmd => (
-                    <div key={cmd.id} style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 44px' }}>
-                      <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
-                      <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
-                      <span style={{ ...styles.cellTxt, color: '#0077B6', fontWeight: '600' }}>{cmd.modeReception === 'livraison' ? '🛵 ' + getNomLivreur(cmd) : '🏪 Retrait'}</span>
-                      <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
-                      <span>{statutBadge(cmd.statut)}</span>
-                      <span style={{ color: '#aaa', fontSize: '0.78rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}</span>
-                      <button style={styles.deleteBtn} onClick={() => supprimerCommande(cmd.id)}>🗑️</button>
+                  {!isMobile && (
+                    <div style={{ ...styles.tableHeader, gridTemplateColumns: '1fr 1fr 1.5fr 1fr 1fr 1fr 44px' }}>
+                      <span>Code</span><span>Client</span><span>Livreur</span><span>Total</span><span>Statut</span><span>Heure</span><span></span>
                     </div>
-                  ))}
+                  )}
+                  {statsJourSelectionne.commandes.map(cmd => <RowCommande key={cmd.id} cmd={cmd} avecHeure={true} />)}
                 </div>
               )}
             </>
@@ -526,16 +556,11 @@ const Dashboard = () => {
               <h2 style={styles.sectionTitle}>Revenus par <span style={{ color: '#E63946' }}>mode de paiement</span></h2>
               <div style={styles.periodeSwitch}>
                 {[{ key: 'aujourd', label: "Aujourd'hui" }, { key: 'semaine', label: '7 derniers jours' }, { key: 'mois', label: '30 derniers jours' }].map(p => (
-                  <button key={p.key} style={{ ...styles.periodeBtn, ...(periodeRevenu === p.key ? styles.periodeBtnActif : {}) }}
-                    onClick={() => { setPeriodeRevenu(p.key); setJourRevenuSelectionne(null); }}>
-                    {p.label}
-                  </button>
+                  <button key={p.key} style={{ ...styles.periodeBtn, ...(periodeRevenu === p.key ? styles.periodeBtnActif : {}) }} onClick={() => { setPeriodeRevenu(p.key); setJourRevenuSelectionne(null); }}>{p.label}</button>
                 ))}
               </div>
               <div style={styles.totalGlobal}>
-                <p style={styles.totalGlobalLabel}>
-                  Total encaisse — {periodeRevenu === 'aujourd' ? "Aujourd'hui" : periodeRevenu === 'semaine' ? (jourRevenuSelectionne ? new Date(jourRevenuSelectionne).toLocaleDateString('fr-FR') : '7 derniers jours') : '30 derniers jours'}
-                </p>
+                <p style={styles.totalGlobalLabel}>Total encaisse — {periodeRevenu === 'aujourd' ? "Aujourd'hui" : periodeRevenu === 'semaine' ? (jourRevenuSelectionne ? new Date(jourRevenuSelectionne).toLocaleDateString('fr-FR') : '7 derniers jours') : '30 derniers jours'}</p>
                 <p style={styles.totalGlobalVal}>{revenuTotalAffiche.toLocaleString()} FCFA</p>
                 <p style={styles.totalGlobalSub}>
                   {statsCartes ? statsCartes.nb : commandesPayeesPeriode.length} commande(s) payee(s)
@@ -669,29 +694,15 @@ const Dashboard = () => {
                 <>
                   <h2 style={{ ...styles.sectionTitle, marginTop: '1rem' }}>Detail des paiements</h2>
                   <div style={styles.tableWrap}>
-                    <div style={{ ...styles.tableHeader, gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr' }}>
-                      <span>Code</span><span>Client</span><span>Paiement</span><span>Total</span><span>Date</span>
-                    </div>
+                    {!isMobile && (
+                      <div style={{ ...styles.tableHeader, gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr' }}>
+                        <span>Code</span><span>Client</span><span>Paiement</span><span>Total</span><span>Date</span>
+                      </div>
+                    )}
                     {commandesPayeesPeriode.length === 0 ? (
                       <div style={{ padding: '2rem', textAlign: 'center', color: '#aaa', fontFamily: F.corps }}>Aucun paiement sur cette periode</div>
                     ) : (
-                      commandesPayeesPeriode.map(cmd => {
-                        const mp = (cmd.modePaiement || '').toLowerCase();
-                        return (
-                          <div key={cmd.id} style={{ ...styles.tableRow, gridTemplateColumns: '1fr 1fr 1fr 1fr 1fr' }}>
-                            <span style={styles.codeCmd}>#{cmd.codeCommande}</span>
-                            <span style={styles.cellTxt}>{cmd.client?.nom || cmd.clientNom || 'Client'}</span>
-                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                              {mp.includes('airtel') && <img src="/images/airtel.png" alt="Airtel" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain' }} />}
-                              {mp.includes('moov') && <img src="/images/moov.png" alt="Moov" style={{ width: '20px', height: '20px', borderRadius: '4px', objectFit: 'contain' }} />}
-                              {mp.includes('espece') && <span>💵</span>}
-                              <span style={styles.cellTxt}>{cmd.modePaiement}</span>
-                            </span>
-                            <span style={{ ...styles.cellTxt, color: '#E63946', fontWeight: '700' }}>{parseFloat(cmd.total).toLocaleString()} FCFA</span>
-                            <span style={{ color: '#aaa', fontSize: '0.78rem', fontFamily: F.corps }}>{new Date(cmd.createdAt).toLocaleDateString('fr-FR')}</span>
-                          </div>
-                        );
-                      })
+                      commandesPayeesPeriode.map(cmd => <RowPaiement key={cmd.id} cmd={cmd} />)
                     )}
                   </div>
                 </>
@@ -705,83 +716,82 @@ const Dashboard = () => {
 };
 
 const styles = {
-  page: { maxWidth: '1200px', margin: '0 auto', padding: 'clamp(5rem, 10vw, 6rem) 2rem 4rem', minHeight: '100vh', fontFamily: "'Inter', -apple-system, sans-serif" },
-  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' },
-  titre: { fontFamily: 'Georgia, serif', fontSize: 'clamp(2rem, 4vw, 2.8rem)', fontWeight: '900', color: '#0d0d0d', letterSpacing: '-0.02em', marginBottom: '0.4rem' },
-  refresh: { color: '#aaa', fontSize: '0.82rem', fontFamily: "'Inter', sans-serif" },
-  statutPill: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.6rem 1.2rem', borderRadius: '100px', fontSize: '0.85rem', fontWeight: '700', fontFamily: "'Inter', sans-serif", textDecoration: 'none', transition: 'all 0.2s ease' },
+  page: { maxWidth: '1200px', margin: '0 auto', padding: 'clamp(4.5rem, 10vw, 6rem) 1rem 6rem', minHeight: '100vh', fontFamily: "'Inter', -apple-system, sans-serif" },
+  header: { display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1.5rem', flexWrap: 'wrap', gap: '0.8rem' },
+  titre: { fontFamily: 'Georgia, serif', fontSize: 'clamp(1.6rem, 4vw, 2.8rem)', fontWeight: '900', color: '#0d0d0d', letterSpacing: '-0.02em', marginBottom: '0.4rem' },
+  refresh: { color: '#aaa', fontSize: '0.78rem', fontFamily: "'Inter', sans-serif" },
+  statutPill: { display: 'inline-flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem 1rem', borderRadius: '100px', fontSize: '0.82rem', fontWeight: '700', fontFamily: "'Inter', sans-serif", textDecoration: 'none' },
   statutDot: { width: '8px', height: '8px', borderRadius: '50%', flexShrink: 0 },
-  statutEdit: { color: 'inherit', opacity: 0.6, fontSize: '0.78rem', marginLeft: '0.3rem' },
-  onglets: { display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' },
-  onglet: { background: 'white', border: '1.5px solid #e8e8ed', padding: '0.65rem 1.3rem', borderRadius: '100px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', fontFamily: "'Inter', sans-serif", color: '#555', transition: 'all 0.2s ease' },
+  statutEdit: { color: 'inherit', opacity: 0.6, fontSize: '0.75rem', marginLeft: '0.3rem' },
+  onglets: { display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
+  onglet: { background: 'white', border: '1.5px solid #e8e8ed', padding: '0.55rem 0.9rem', borderRadius: '100px', cursor: 'pointer', fontWeight: '600', fontSize: '0.78rem', fontFamily: "'Inter', sans-serif", color: '#555' },
   ongletActif: { background: '#E63946', border: '1.5px solid #E63946', color: 'white', boxShadow: '0 4px 12px rgba(230,57,70,0.25)' },
-
- statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' },
+  statsGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' },
   stat: { background: 'white', borderRadius: '14px', padding: '1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)' },
   statIcon: { fontSize: '1.3rem', marginBottom: '0.4rem' },
   statNum: { fontSize: '1.5rem', fontWeight: '900', color: '#0d0d0d', fontFamily: "'Inter', sans-serif", letterSpacing: '-0.02em' },
   statLabel: { color: '#888', marginTop: '0.2rem', fontSize: '0.75rem', fontFamily: "'Inter', sans-serif" },
   sectionTitle: { fontFamily: 'Georgia, serif', fontSize: 'clamp(1.1rem, 2.5vw, 1.5rem)', color: '#0d0d0d', marginBottom: '0.8rem', fontWeight: '700' },
-  // ✅ Menu 2x2 sur mobile
-  menuGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: '1rem', marginBottom: '2rem' },
-  menuCard: { background: 'white', borderRadius: '20px', padding: '1.8rem 1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', textDecoration: 'none', color: '#0d0d0d', textAlign: 'center', transition: 'all 0.25s ease', border: '1.5px solid #f0f0f0' },
-  menuIcon: { fontSize: '2.5rem', marginBottom: '0.8rem' },
-  menuTitre: { fontFamily: 'Georgia, serif', fontSize: '1.1rem', fontWeight: '700', marginBottom: '0.3rem', color: '#0d0d0d' },
-  menuSub: { fontSize: '0.82rem', fontFamily: "'Inter', sans-serif" },
-  empty: { background: 'white', borderRadius: '16px', padding: '2.5rem', textAlign: 'center', color: '#aaa', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '1rem', fontFamily: "'Inter', sans-serif", fontSize: '0.9rem' },
-  graphCard: { background: 'white', borderRadius: '20px', padding: '2rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '2rem' },
-  barChart: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: '160px', gap: '0.4rem' },
+  menuGrid: { display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.8rem', marginBottom: '1.5rem' },
+  menuCard: { background: 'white', borderRadius: '16px', padding: '1.2rem 1rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', textDecoration: 'none', color: '#0d0d0d', textAlign: 'center', border: '1.5px solid #f0f0f0' },
+  menuIcon: { fontSize: '2rem', marginBottom: '0.5rem' },
+  menuTitre: { fontFamily: 'Georgia, serif', fontSize: '0.95rem', fontWeight: '700', marginBottom: '0.2rem', color: '#0d0d0d' },
+  menuSub: { fontSize: '0.75rem', fontFamily: "'Inter', sans-serif" },
+  empty: { background: 'white', borderRadius: '14px', padding: '2rem', textAlign: 'center', color: '#aaa', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '1rem', fontFamily: "'Inter', sans-serif", fontSize: '0.88rem' },
+  graphCard: { background: 'white', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '1.5rem' },
+  barChart: { display: 'flex', alignItems: 'flex-end', justifyContent: 'space-around', height: '140px', gap: '0.2rem' },
   barWrapper: { display: 'flex', flexDirection: 'column', alignItems: 'center', cursor: 'pointer', flex: 1 },
-  barValue: { fontSize: '0.78rem', fontWeight: '700', color: '#0d0d0d', marginBottom: '0.3rem', fontFamily: "'Inter', sans-serif" },
-  barContainer: { width: '100%', height: '110px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
-  bar: { width: '55%', borderRadius: '8px 8px 0 0', transition: 'all 0.35s ease', minHeight: '4px' },
-  barLabel: { fontSize: '0.75rem', marginTop: '0.4rem', fontFamily: "'Inter', sans-serif" },
-  barDate: { fontSize: '0.65rem', color: '#bbb', fontFamily: "'Inter', sans-serif" },
-  tableWrap: { background: 'white', borderRadius: '20px', overflow: 'hidden', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', marginBottom: '2rem', overflowX: 'auto' },
+  barValue: { fontSize: '0.65rem', fontWeight: '700', color: '#0d0d0d', marginBottom: '0.2rem', fontFamily: "'Inter', sans-serif" },
+  barContainer: { width: '100%', height: '90px', display: 'flex', alignItems: 'flex-end', justifyContent: 'center' },
+  bar: { width: '60%', borderRadius: '6px 6px 0 0', transition: 'all 0.35s ease', minHeight: '4px' },
+  barLabel: { fontSize: '0.65rem', marginTop: '0.3rem', fontFamily: "'Inter', sans-serif" },
+  barDate: { fontSize: '0.58rem', color: '#bbb', fontFamily: "'Inter', sans-serif" },
+  tableWrap: { background: 'white', borderRadius: '16px', overflow: 'hidden', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', marginBottom: '1.5rem' },
   tableHeader: { display: 'grid', padding: '0.9rem 1.5rem', background: '#0d0d0d', color: 'rgba(255,255,255,0.7)', fontWeight: '700', fontSize: '0.75rem', fontFamily: "'Inter', sans-serif", letterSpacing: '0.05em', textTransform: 'uppercase' },
-  tableRow: { display: 'grid', padding: '0.9rem 1.5rem', borderBottom: '1px solid #f5f5f7', alignItems: 'center', fontSize: '0.85rem', fontFamily: "'Inter', sans-serif", transition: 'background 0.2s' },
+  tableRow: { display: 'grid', padding: '0.9rem 1.5rem', borderBottom: '1px solid #f5f5f7', alignItems: 'center', fontSize: '0.85rem', fontFamily: "'Inter', sans-serif" },
+  mobileCard: { padding: '1rem', borderBottom: '1px solid #f5f5f7', fontFamily: "'Inter', sans-serif" },
   codeCmd: { fontWeight: '800', color: '#0d0d0d', fontFamily: 'Georgia, serif', fontSize: '0.9rem' },
   cellTxt: { color: '#444', fontSize: '0.85rem' },
-  deleteBtn: { background: '#fff0f0', color: '#c00', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.85rem', transition: 'all 0.2s ease' },
-  addBtn: { background: '#E63946', color: 'white', padding: '0.65rem 1.4rem', borderRadius: '100px', textDecoration: 'none', fontWeight: '700', fontSize: '0.85rem', fontFamily: "'Inter', sans-serif", boxShadow: '0 4px 12px rgba(230,57,70,0.22)' },
-  periodeSwitch: { display: 'flex', gap: '0.5rem', marginBottom: '2rem', flexWrap: 'wrap' },
-  periodeBtn: { background: 'white', border: '1.5px solid #e8e8ed', padding: '0.6rem 1.2rem', borderRadius: '100px', cursor: 'pointer', fontWeight: '600', fontSize: '0.85rem', fontFamily: "'Inter', sans-serif", color: '#555', transition: 'all 0.2s ease' },
+  deleteBtn: { background: '#fff0f0', color: '#c00', border: 'none', padding: '0.35rem 0.6rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '700', fontSize: '0.82rem' },
+  addBtn: { background: '#E63946', color: 'white', padding: '0.6rem 1.2rem', borderRadius: '100px', textDecoration: 'none', fontWeight: '700', fontSize: '0.82rem', fontFamily: "'Inter', sans-serif" },
+  periodeSwitch: { display: 'flex', gap: '0.4rem', marginBottom: '1.5rem', flexWrap: 'wrap' },
+  periodeBtn: { background: 'white', border: '1.5px solid #e8e8ed', padding: '0.5rem 1rem', borderRadius: '100px', cursor: 'pointer', fontWeight: '600', fontSize: '0.78rem', fontFamily: "'Inter', sans-serif", color: '#555' },
   periodeBtnActif: { background: '#0d0d0d', border: '1.5px solid #0d0d0d', color: 'white' },
-  totalGlobal: { background: 'linear-gradient(135deg, #1a1a2e, #2d1a1a)', borderRadius: '20px', padding: '2rem', textAlign: 'center', marginBottom: '1.5rem', color: 'white' },
-  totalGlobalLabel: { fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.5rem' },
-  totalGlobalVal: { fontFamily: 'Georgia, serif', fontSize: 'clamp(2rem, 4vw, 3rem)', fontWeight: '900', color: '#FFB703', letterSpacing: '-0.02em' },
-  totalGlobalSub: { fontFamily: "'Inter', sans-serif", fontSize: '0.82rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.5rem' },
-  revenuGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.2rem', marginBottom: '2rem' },
-  revenuCard: { background: 'white', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.06)', border: '1.5px solid #f0f0f0' },
-  revenuCardHeader: { display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.2rem' },
-  revenuLogo: { width: '48px', height: '48px', borderRadius: '12px', objectFit: 'contain', border: '1px solid #e8e8ed', padding: '4px', background: 'white', flexShrink: 0 },
-  especesIconGrand: { width: '48px', height: '48px', borderRadius: '12px', background: '#f0faf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.6rem', border: '1px solid #b7e4c7', flexShrink: 0 },
-  revenuNom: { fontFamily: 'Georgia, serif', fontWeight: '700', fontSize: '1rem', color: '#0d0d0d' },
-  revenuNb: { fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#aaa', marginTop: '0.2rem' },
-  revenuMontant: { fontFamily: "'Inter', sans-serif", fontWeight: '900', fontSize: '1.8rem', color: '#0d0d0d', letterSpacing: '-0.02em', marginBottom: '1rem' },
-  revenuFcfa: { fontSize: '0.9rem', fontWeight: '500', color: '#aaa' },
-  barreProgres: { height: '8px', background: '#f0f0f0', borderRadius: '100px', marginBottom: '0.5rem', overflow: 'hidden' },
+  totalGlobal: { background: 'linear-gradient(135deg, #1a1a2e, #2d1a1a)', borderRadius: '16px', padding: '1.5rem', textAlign: 'center', marginBottom: '1.2rem', color: 'white' },
+  totalGlobalLabel: { fontFamily: "'Inter', sans-serif", fontSize: '0.75rem', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: '0.4rem' },
+  totalGlobalVal: { fontFamily: 'Georgia, serif', fontSize: 'clamp(1.8rem, 4vw, 3rem)', fontWeight: '900', color: '#FFB703', letterSpacing: '-0.02em' },
+  totalGlobalSub: { fontFamily: "'Inter', sans-serif", fontSize: '0.75rem', color: 'rgba(255,255,255,0.5)', marginTop: '0.4rem' },
+  revenuGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' },
+  revenuCard: { background: 'white', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.06)', border: '1.5px solid #f0f0f0' },
+  revenuCardHeader: { display: 'flex', alignItems: 'center', gap: '0.8rem', marginBottom: '1rem' },
+  revenuLogo: { width: '40px', height: '40px', borderRadius: '10px', objectFit: 'contain', border: '1px solid #e8e8ed', padding: '3px', background: 'white', flexShrink: 0 },
+  especesIconGrand: { width: '40px', height: '40px', borderRadius: '10px', background: '#f0faf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', border: '1px solid #b7e4c7', flexShrink: 0 },
+  revenuNom: { fontFamily: 'Georgia, serif', fontWeight: '700', fontSize: '0.95rem', color: '#0d0d0d' },
+  revenuNb: { fontFamily: "'Inter', sans-serif", fontSize: '0.75rem', color: '#aaa', marginTop: '0.2rem' },
+  revenuMontant: { fontFamily: "'Inter', sans-serif", fontWeight: '900', fontSize: '1.5rem', color: '#0d0d0d', letterSpacing: '-0.02em', marginBottom: '0.8rem' },
+  revenuFcfa: { fontSize: '0.85rem', fontWeight: '500', color: '#aaa' },
+  barreProgres: { height: '6px', background: '#f0f0f0', borderRadius: '100px', marginBottom: '0.4rem', overflow: 'hidden' },
   barreProgresInner: { height: '100%', borderRadius: '100px', transition: 'width 0.5s ease' },
-  revenuPct: { fontFamily: "'Inter', sans-serif", fontSize: '0.78rem', color: '#888', fontWeight: '600' },
-  jourDetail: { background: '#f9f9f9', borderRadius: '14px', padding: '1.2rem', marginTop: '1.2rem', border: '1.5px solid #e8e8ed' },
-  jourDetailTitre: { fontFamily: 'Georgia, serif', fontWeight: '700', fontSize: '0.9rem', color: '#0d0d0d', marginBottom: '0.8rem' },
-  jourDetailGrid: { display: 'flex', flexDirection: 'column', gap: '0.5rem' },
-  jourDetailItem: { display: 'flex', alignItems: 'center', gap: '0.6rem', padding: '0.4rem 0' },
-  searchBar: { display: 'flex', alignItems: 'center', background: 'white', borderRadius: '50px', padding: '0.7rem 1.5rem', boxShadow: '0 4px 16px rgba(0,0,0,0.08)', border: '2px solid #e0e0e0', gap: '0.8rem', marginBottom: '1.5rem' },
-  searchInput: { flex: 1, border: 'none', outline: 'none', fontSize: '1rem', background: 'transparent', fontWeight: '600', fontFamily: "'Inter', sans-serif" },
-  clearBtn: { background: '#f0f0f0', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer', fontWeight: '700' },
-  caisseBanniere: { background: 'linear-gradient(135deg, #f3e5f5, #ede7f6)', border: '1.5px solid #ce93d8', borderRadius: '16px', padding: '1.2rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', color: '#6a1b9a' },
-  caisseCard: { background: 'white', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.07)' },
-  validerBtn: { background: 'linear-gradient(135deg, #2D6A4F, #40916c)', color: 'white', border: 'none', padding: '1rem 1.5rem', borderRadius: '100px', fontWeight: '700', cursor: 'pointer', width: '100%', fontSize: '0.95rem', fontFamily: "'Inter', sans-serif", boxShadow: '0 6px 18px rgba(45,106,79,0.28)', transition: 'all 0.25s ease' },
-  remiseBanniere: { background: 'linear-gradient(135deg, #fffbf0, #fff8e7)', border: '1.5px solid #FFB703', borderRadius: '16px', padding: '1.2rem 1.5rem', marginBottom: '1.5rem', display: 'flex', alignItems: 'center', gap: '1rem', color: '#b37a00' },
-  remiseCard: { background: 'white', borderRadius: '20px', padding: '1.5rem', boxShadow: '0 2px 12px rgba(0,0,0,0.07)', border: '1.5px solid #FFB703' },
-  remiseAvatar: { width: '44px', height: '44px', borderRadius: '50%', background: '#fff8e7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.4rem', border: '1.5px solid #FFB703', flexShrink: 0 },
-  confirmerRemiseBtn: { background: 'linear-gradient(135deg, #FFB703, #f59e00)', color: '#1A1A2E', border: 'none', padding: '1rem 1.5rem', borderRadius: '100px', fontWeight: '800', cursor: 'pointer', width: '100%', fontSize: '0.95rem', fontFamily: "'Inter', sans-serif", boxShadow: '0 6px 18px rgba(255,183,3,0.35)', marginTop: '1rem', transition: 'all 0.25s ease' },
-  separateur: { height: '1.5px', background: '#e8e8ed', margin: '0 0 2rem 0', borderRadius: '100px' },
-  confirmBox: { background: 'linear-gradient(135deg, #fffbf0, #fff8e7)', border: '1.5px solid #FFB703', borderRadius: '14px', padding: '1rem 1.2rem', marginTop: '1rem' },
-  confirmTitre: { fontWeight: '800', fontSize: '0.95rem', color: '#b37a00', marginBottom: '0.4rem', fontFamily: 'Georgia, serif' },
-  confirmSub: { fontSize: '0.85rem', color: '#666', lineHeight: '1.6', fontFamily: "'Inter', sans-serif" },
-  annulerConfirmBtn: { background: '#f0f0f0', color: '#333', border: 'none', padding: '0.8rem 1.5rem', borderRadius: '100px', fontWeight: '600', cursor: 'pointer', fontSize: '0.88rem', fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }
+  revenuPct: { fontFamily: "'Inter', sans-serif", fontSize: '0.75rem', color: '#888', fontWeight: '600' },
+  jourDetail: { background: '#f9f9f9', borderRadius: '12px', padding: '1rem', marginTop: '1rem', border: '1.5px solid #e8e8ed' },
+  jourDetailTitre: { fontFamily: 'Georgia, serif', fontWeight: '700', fontSize: '0.85rem', color: '#0d0d0d', marginBottom: '0.8rem' },
+  jourDetailGrid: { display: 'flex', flexDirection: 'column', gap: '0.4rem' },
+  jourDetailItem: { display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.3rem 0' },
+  searchBar: { display: 'flex', alignItems: 'center', background: 'white', borderRadius: '50px', padding: '0.6rem 1.2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.08)', border: '1.5px solid #e0e0e0', gap: '0.6rem', marginBottom: '1.2rem' },
+  searchInput: { flex: 1, border: 'none', outline: 'none', fontSize: '0.9rem', background: 'transparent', fontFamily: "'Inter', sans-serif" },
+  clearBtn: { background: '#f0f0f0', border: 'none', borderRadius: '50%', width: '26px', height: '26px', cursor: 'pointer', fontWeight: '700', fontSize: '0.75rem' },
+  caisseBanniere: { background: 'linear-gradient(135deg, #f3e5f5, #ede7f6)', border: '1.5px solid #ce93d8', borderRadius: '14px', padding: '1rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', color: '#6a1b9a' },
+  caisseCard: { background: 'white', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)' },
+  validerBtn: { background: 'linear-gradient(135deg, #2D6A4F, #40916c)', color: 'white', border: 'none', padding: '0.9rem 1.2rem', borderRadius: '100px', fontWeight: '700', cursor: 'pointer', width: '100%', fontSize: '0.88rem', fontFamily: "'Inter', sans-serif", boxShadow: '0 4px 12px rgba(45,106,79,0.28)' },
+  remiseBanniere: { background: 'linear-gradient(135deg, #fffbf0, #fff8e7)', border: '1.5px solid #FFB703', borderRadius: '14px', padding: '1rem', marginBottom: '1.2rem', display: 'flex', alignItems: 'center', gap: '0.8rem', color: '#b37a00' },
+  remiseCard: { background: 'white', borderRadius: '16px', padding: '1.2rem', boxShadow: '0 2px 8px rgba(0,0,0,0.07)', border: '1.5px solid #FFB703' },
+  remiseAvatar: { width: '40px', height: '40px', borderRadius: '50%', background: '#fff8e7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem', border: '1.5px solid #FFB703', flexShrink: 0 },
+  confirmerRemiseBtn: { background: 'linear-gradient(135deg, #FFB703, #f59e00)', color: '#1A1A2E', border: 'none', padding: '0.9rem 1.2rem', borderRadius: '100px', fontWeight: '800', cursor: 'pointer', width: '100%', fontSize: '0.88rem', fontFamily: "'Inter', sans-serif", boxShadow: '0 4px 12px rgba(255,183,3,0.35)', marginTop: '0.8rem' },
+  separateur: { height: '1.5px', background: '#e8e8ed', margin: '0 0 1.5rem 0', borderRadius: '100px' },
+  confirmBox: { background: 'linear-gradient(135deg, #fffbf0, #fff8e7)', border: '1.5px solid #FFB703', borderRadius: '12px', padding: '1rem', marginTop: '0.8rem' },
+  confirmTitre: { fontWeight: '800', fontSize: '0.9rem', color: '#b37a00', marginBottom: '0.3rem', fontFamily: 'Georgia, serif' },
+  confirmSub: { fontSize: '0.82rem', color: '#666', lineHeight: '1.6', fontFamily: "'Inter', sans-serif" },
+  annulerConfirmBtn: { background: '#f0f0f0', color: '#333', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '100px', fontWeight: '600', cursor: 'pointer', fontSize: '0.85rem', fontFamily: "'Inter', sans-serif", whiteSpace: 'nowrap' }
 };
 
 export default Dashboard;
