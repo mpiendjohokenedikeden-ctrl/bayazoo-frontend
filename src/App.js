@@ -1,5 +1,5 @@
 import React from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from './context/AuthContext';
 import Accueil from './pages/Accueil';
 import Menu from './pages/Menu';
@@ -43,9 +43,15 @@ const RouteClient = ({ element }) => {
   return element;
 };
 
-function App() {
+// ✅ Composant interne pour utiliser useLocation à l'intérieur du Router
+const AppContent = () => {
+  const location = useLocation();
+  const cacheFooter = location.pathname.startsWith('/admin') ||
+    location.pathname.startsWith('/livreur') ||
+    location.pathname.startsWith('/receveur');
+
   return (
-    <Router>
+    <>
       <Navbar />
       <Routes>
         <Route path="/" element={<Accueil />} />
@@ -53,6 +59,7 @@ function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/inscription" element={<Inscription />} />
         <Route path="/mot-de-passe-oublie" element={<MotDePasseOublie />} />
+        <Route path="/profil" element={<RouteClient element={<Profil />} />} />
         <Route path="/panier" element={<RouteClient element={<Panier />} />} />
         <Route path="/suivi" element={<RouteClient element={<Suivi />} />} />
         <Route path="/admin" element={<RouteProtegee element={<Dashboard />} role="admin" />} />
@@ -64,10 +71,17 @@ function App() {
         <Route path="/livreur/scanner" element={<RouteProtegee element={<Scanner />} role="livreur" />} />
         <Route path="/receveur/commandes" element={<RouteProtegee element={<ReceveurCommandes />} role="receveur" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
-        <Route path="/profil" element={<RouteClient element={<Profil />} />} />
       </Routes>
       <ChatFlottant />
-      <Footer />
+      {!cacheFooter && <Footer />}
+    </>
+  );
+};
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }
